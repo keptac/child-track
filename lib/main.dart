@@ -11,37 +11,50 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Child Track',
       theme: ThemeData(
-
         primarySwatch: Colors.blue,
       ),
-      home: WalletApp(),
+      home: ChildTrack(),
       debugShowCheckedModeBanner: true,
     );
   }
 }
 
-class WalletApp extends StatefulWidget {
+class ChildTrack extends StatefulWidget {
   @override
-  _WalletAppState createState() => _WalletAppState();
+  _ChildTrackState createState() => _ChildTrackState();
 }
 
-class _WalletAppState extends State<WalletApp> {
+class _ChildTrackState extends State<ChildTrack> {
   var screens = [
     Home(),
     FireMap(),
-  ]; //screens for each tab
+  ];
 
   int selectedTab = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('CHILD TRACK'),
+        centerTitle: true,
+        backgroundColor: Color.fromRGBO(38, 81, 158, 1),
+      ),
       backgroundColor: Color.fromRGBO(38, 81, 158, 1),
       bottomNavigationBar: BottomNavigationBar(
         items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), title: Text("Home")),
           BottomNavigationBarItem(
-              icon: Icon(Icons.credit_card), title: Text("Child Location")),
+              icon: Icon(
+                Icons.home,
+                color: Color.fromRGBO(38, 81, 158, 1),
+              ),
+              title: Text("Home")),
+          BottomNavigationBarItem(
+              icon: Icon(
+                Icons.location_on,
+                color: Color.fromRGBO(38, 81, 158, 1),
+              ),
+              title: Text("Child Location")),
         ],
         onTap: (index) {
           setState(() {
@@ -52,6 +65,7 @@ class _WalletAppState extends State<WalletApp> {
         iconSize: 30,
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: Color.fromRGBO(38, 81, 158, 1),
         onPressed: () {},
         elevation: 0,
         child: Icon(Icons.add),

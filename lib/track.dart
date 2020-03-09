@@ -43,15 +43,15 @@ class FireMapState extends State<FireMap> {
           mapType: MapType.normal,
           markers: _markers,
         ),
-        Positioned(
-          bottom: 50,
-          right: 10,
-          child: FlatButton(
-            child: Icon(Icons.pin_drop),
-            color: Colors.green,
-            onPressed: () => _addGeoPoint(),
-          ),
-        ),
+        // Positioned(
+        //   bottom: 50,
+        //   right: 10,
+        //   child: FlatButton(
+        //     child: Icon(Icons.pin_drop),
+        //     color: Colors.green,
+        //     onPressed: () => _addGeoPoint(),
+        //   ),
+        // ),
         Positioned(
           bottom: 50,
           left: 10,

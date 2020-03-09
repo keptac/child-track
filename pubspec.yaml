@@ -32,6 +32,7 @@ dependencies:
   geoflutterfire:
   firebase_auth:  
   google_sign_in: 
+  firebase_messaging: ^6.0.12
   location:
     
 dev_dependencies:

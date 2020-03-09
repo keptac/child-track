@@ -281,7 +281,7 @@ class HomeScreen extends State<Home> {
                                         CrossAxisAlignment.start,
                                     children: <Widget>[
                                       Text(
-                                        "Nyasha",
+                                        "Shepherd",
                                         style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.w700,
@@ -316,7 +316,7 @@ class HomeScreen extends State<Home> {
                           );
                         },
                         shrinkWrap: true,
-                        itemCount: 2,
+                        itemCount: 1,
                         padding: EdgeInsets.only(bottom: 30.0),
                         controller: ScrollController(keepScrollOffset: false),
                       ),
