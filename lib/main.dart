@@ -27,7 +27,7 @@ class WalletApp extends StatefulWidget {
 
 class _WalletAppState extends State<WalletApp> {
   var screens = [
-    HomeScreen(),
+    Home(),
     FireMap(),
   ]; //screens for each tab
 

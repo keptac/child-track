@@ -1,9 +1,79 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
-class HomeScreen extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geoflutterfire/geoflutterfire.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:location/location.dart';
+import 'dart:math' show cos, sqrt, asin;
+
+import 'package:rxdart/rxdart.dart';
+
+class Home extends StatefulWidget {
+  @override
+  State createState() => HomeScreen();
+}
+
+class HomeScreen extends State<Home> {
+  double distance = 0.0;
+  GoogleMapController mapController;
+  Location location = new Location();
+  Firestore firestore = Firestore.instance;
+  Geoflutterfire geo = Geoflutterfire();
+  BehaviorSubject<double> radius = BehaviorSubject.seeded(5.0);
+  StreamSubscription subscription;
+  Stream<dynamic> query;
+
+  LatLng _lastMapPosition = LatLng(-17.823, 30.955);
+
+  double calculateDistance(lat1, lon1, lat2, lon2) {
+    var p = 0.017453292519943295;
+    var c = cos;
+    var a = 0.5 -
+        c((lat2 - lat1) * p) / 2 +
+        c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p)) / 2;
+    return 12742 * asin(sqrt(a));
+  }
+
+  void _updateMarkers(List<DocumentSnapshot> documentList) async {
+    print(documentList);
+    documentList.forEach((DocumentSnapshot document) {
+      GeoPoint pos = document.data['position']['geopoint'];
+      double calDist = calculateDistance(pos.latitude, pos.longitude,
+          _lastMapPosition.latitude, _lastMapPosition.longitude);
+
+      if (distance > 2000) {
+        print(distance);
+      }
+
+      setState(() {
+        distance = double.parse(calDist.toStringAsFixed(2)) * 1000;
+      });
+    });
+  }
+
+  _startQuery() async {
+    // Get users location
+    var pos = await location.getLocation();
+    print(pos);
+    double lat = pos.latitude;
+    double lng = pos.longitude;
+    _lastMapPosition = LatLng(lat, lng);
+    // Make a referece to firestore
+    var ref = firestore.collection('locations');
+    GeoFirePoint center = geo.point(latitude: lat, longitude: lng);
+
+    // Subscribe to query
+    subscription = radius.switchMap((rad) {
+      return geo
+          .collection(collectionRef: ref)
+          .within(center: center, radius: rad, field: 'position');
+    }).listen(_updateMarkers);
+  }
+
   @override
   Widget build(BuildContext context) {
-    double distance = 0.5;
+    _startQuery();
     return Container(
       height: MediaQuery.of(context).size.height,
       width: double.infinity,
@@ -224,18 +294,18 @@ class HomeScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: <Widget>[
                                     Text(
-                                      "$distance M Away",
+                                      "$distance Metres Away",
                                       style: TextStyle(
-                                          fontSize: 18,
+                                          fontSize: 15,
                                           fontWeight: FontWeight.w700,
-                                          color: distance > 3
+                                          color: distance > 300
                                               ? Colors.red
                                               : Colors.lightGreen),
                                     ),
                                     Text(
-                                      "26 Jan",
+                                      DateTime.now().toString(),
                                       style: TextStyle(
-                                          fontSize: 15,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w700,
                                           color: Colors.grey[500]),
                                     ),

@@ -77,6 +77,8 @@ class FireMapState extends State<FireMap> {
       double distance = calculateDistance(pos.latitude, pos.longitude,
           _lastMapPosition.latitude, _lastMapPosition.longitude);
 
+      double disParse = double.parse(distance.toStringAsFixed(2));
+
       if (distance > 3) {
         print(distance);
       } else {
@@ -90,7 +92,7 @@ class FireMapState extends State<FireMap> {
           icon: BitmapDescriptor.defaultMarker,
           infoWindow: InfoWindow(
             title: 'Child Location 🍄🍄🍄',
-            snippet: '$distance kilometers from you',
+            snippet: '$disParse kilometers from you',
           ),
         ));
       });
