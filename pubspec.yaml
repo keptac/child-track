@@ -28,12 +28,13 @@ dependencies:
   firebase_analytics: 
   cloud_firestore: 
   google_maps_flutter: ^0.5.24+1
+  firebase_messaging: ^6.0.13
   rxdart: ^0.23.1
   geoflutterfire:
   firebase_auth:  
   google_sign_in: 
-  firebase_messaging: ^6.0.12
   location:
+  intl:
     
 dev_dependencies:
   flutter_test:

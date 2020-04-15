@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:track/home.dart';
+import 'package:track/pushNotification.dart';
 import 'package:track/track.dart';
 
 void main() => runApp(MyApp());
@@ -25,6 +26,9 @@ class ChildTrack extends StatefulWidget {
 }
 
 class _ChildTrackState extends State<ChildTrack> {
+
+  PushNotificationsManager notify = PushNotificationsManager();
+  
   var screens = [
     Home(),
     FireMap(),
@@ -34,6 +38,8 @@ class _ChildTrackState extends State<ChildTrack> {
 
   @override
   Widget build(BuildContext context) {
+    notify.init();
+
     return Scaffold(
       appBar: AppBar(
         title: Text('CHILD TRACK'),
@@ -49,6 +55,7 @@ class _ChildTrackState extends State<ChildTrack> {
                 color: Color.fromRGBO(38, 81, 158, 1),
               ),
               title: Text("Home")),
+              
           BottomNavigationBarItem(
               icon: Icon(
                 Icons.location_on,
@@ -63,12 +70,6 @@ class _ChildTrackState extends State<ChildTrack> {
         },
         showUnselectedLabels: true,
         iconSize: 30,
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Color.fromRGBO(38, 81, 158, 1),
-        onPressed: () {},
-        elevation: 0,
-        child: Icon(Icons.add),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       body: screens[selectedTab],
