@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:track/home.dart';
 import 'package:track/pushNotification.dart';
+import 'package:track/radiusStorage.dart';
 import 'package:track/track.dart';
 
 void main() => runApp(MyApp());
@@ -28,10 +29,10 @@ class ChildTrack extends StatefulWidget {
 class _ChildTrackState extends State<ChildTrack> {
 
   PushNotificationsManager notify = PushNotificationsManager();
-  
+
   var screens = [
-    Home(),
-    FireMap(),
+    FlutterDemo(storage: CounterStorage()),
+    FireMap(storage: CounterStorage()),
   ];
 
   int selectedTab = 0;

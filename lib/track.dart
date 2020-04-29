@@ -1,17 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:flutter/material.dart';
-// import 'package:geoflutterfire/geoflutterfire.dart';
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
-import 'package:rxdart/rxdart.dart';
 import 'dart:math' show cos, sqrt, asin;
 import 'package:http/http.dart' as http;
 import 'package:track/coordinates.dart';
+import 'package:flutter/foundation.dart';
+import 'package:track/radiusStorage.dart';
 
 class FireMap extends StatefulWidget {
+  final CounterStorage storage;
+
+  FireMap({Key key, @required this.storage}) : super(key: key);
   @override
   State createState() => FireMapState();
 }
@@ -19,13 +23,12 @@ class FireMap extends StatefulWidget {
 class FireMapState extends State<FireMap> {
   GoogleMapController mapController;
   Location location = new Location();
-  Firestore firestore = Firestore.instance;
-  BehaviorSubject<double> radius = BehaviorSubject.seeded(5.0);
+
   Stream<dynamic> query;
   StreamSubscription subscription;
   Map<MarkerId, Marker> markers = <MarkerId, Marker>{};
   double distance = 0;
-  static double radi = 10.0;
+  static double _radi = 0;
 
   LatLng _lastMapPosition = LatLng(-17.823, 30.955);
   static LatLng _radiusLocation = LatLng(-17.823, 30.955);
@@ -54,13 +57,19 @@ class FireMapState extends State<FireMap> {
       fillColor: Color.fromRGBO(0, 120, 0, 0.1),
       circleId: CircleId("Parent location"),
       center: LatLng(_radiusLocation.latitude, _radiusLocation.longitude),
-      radius: radi,
+      radius: _radi,
     ),
   ]);
 
   @override
   void initState() {
     super.initState();
+    widget.storage.readCounter().then((int value) {
+      setState(() {
+        _radi = value.toDouble();
+      });
+    });
+    futureCoordinatesValue = fetchCoordinates();
   }
 
   @override
@@ -69,7 +78,7 @@ class FireMapState extends State<FireMap> {
     super.dispose();
   }
 
-  myDistance() async {
+  myLocationFinder() async {
     var pos = await location.getLocation();
     double lat = pos.latitude;
     double lng = pos.longitude;
@@ -97,45 +106,29 @@ class FireMapState extends State<FireMap> {
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             _updateMarkers();
-            myDistance();
+            myLocationFinder();
             Timer(Duration(seconds: 10), () {
-              myDistance();
-            }
-            );
-  
+              myLocationFinder();
+            });
+
             return Stack(
               children: [
                 GoogleMap(
                     onMapCreated: _onMapCreated,
                     initialCameraPosition:
-                        CameraPosition(target: _lastMapPosition, zoom: 100),
+                        CameraPosition(target: _lastMapPosition, zoom: 17),
                     myLocationEnabled: true,
                     mapType: MapType.normal,
                     markers: Set<Marker>.of(markers.values),
                     trafficEnabled: true,
                     circles: circles,
                     myLocationButtonEnabled: true),
-                Positioned(
-                  bottom: 50,
-                  left: 10,
-                  child: Slider(
-                    min: 1.0,
-                    max: 50.0,
-                    divisions: 5,
-                    value: radius.value,
-                    label: 'Radius ${radius.value} m',
-                    activeColor: Colors.green,
-                    inactiveColor: Colors.green.withOpacity(0.2),
-                    onChanged: _updateQuery,
-                  ),
-                ),
               ],
             );
           } else if (snapshot.hasError) {
-            return Text("HElllo   ${snapshot.error}");
+            return Text("${snapshot.error}");
           }
           return Center(child: CircularProgressIndicator());
-        
         });
   }
 
@@ -143,7 +136,7 @@ class FireMapState extends State<FireMap> {
     print('\n--------------------MARKERS----------------------------');
     print(markers);
     print(myModels);
-    print('--------------------MArkerts end--------------------\n');
+    print('--------------------MARKERS end--------------------\n');
 
     for (CoordinatesValue item in myModels) {
       double distance = calculateDistance(
@@ -167,25 +160,16 @@ class FireMapState extends State<FireMap> {
 
       markers[markerId] = marker;
 
-      
-     circles.add(Circle(
-          strokeWidth: 1,
-          strokeColor: Colors.yellow,
-          fillColor: Color.fromRGBO(0, 120, 0, 0.1),
-          circleId: CircleId("Child location"),
-          center: LatLng(
-              item.currentLocationLatitude, item.currentLocationLongitude),
-          radius: radi,
-        ));
+      circles.add(Circle(
+        strokeWidth: 1,
+        strokeColor: Colors.yellow,
+        fillColor: Color.fromRGBO(0, 120, 0, 0.1),
+        circleId: CircleId("Child location"),
+        center:
+            LatLng(item.currentLocationLatitude, item.currentLocationLongitude),
+        radius: _radi,
+      ));
     }
-  }
-
-  _updateQuery(value) {
-    print(value);
-    setState(() {
-      radius.add(value);
-      radi = value;
-    });
   }
 
   void _onMapCreated(GoogleMapController controller) {

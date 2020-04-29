@@ -8,15 +8,25 @@ import 'dart:math' show cos, sqrt, asin;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:track/coordinates.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:track/radiusStorage.dart';
 
-class Home extends StatefulWidget {
+class FlutterDemo extends StatefulWidget {
+  final CounterStorage storage;
+
+  FlutterDemo({Key key, @required this.storage}) : super(key: key);
+
   @override
-  State createState() => HomeScreen();
+  _FlutterDemoState createState() => _FlutterDemoState();
 }
 
-class HomeScreen extends State<Home> {
+class _FlutterDemoState extends State<FlutterDemo> {  
+
+
+
   double distance = 0;
-  double radius = 1500; // In meters
+  double radius; // In meters
   GoogleMapController mapController;
   Location location = new Location();
   Firestore firestore = Firestore.instance;
@@ -43,6 +53,11 @@ class HomeScreen extends State<Home> {
   @override
   void initState() {
     super.initState();
+    widget.storage.readCounter().then((int value) {
+      setState(() {
+        radius = value.toDouble();
+      });
+    });
     futureCoordinatesValue = fetchCoordinatesValue();
     myDistance();
   }
@@ -68,71 +83,84 @@ class HomeScreen extends State<Home> {
     return (12742 * asin(sqrt(a))) * 1000;
   }
 
-  @override
+  Future<File> _changeDistance(int value) {
+    return widget.storage.writeCounter(value);
+  }
+
+   popup() {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20.0)),
+            child: Container(
+              height: 200,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Text('Change your geofence radius',style: TextStyle(fontSize: 18),),
+                    ),
+                    SizedBox(
+                      height: 20,
+                    ),
+                    Slider(
+                      min: 0.0,
+                      max: 300.0,
+                      divisions: 5,
+                      value: radius,
+                      label: 'Radius $radius m',
+                      activeColor: Colors.green,
+                      inactiveColor: Colors.green.withOpacity(0.2),
+                      onChanged: (double newValue) {
+                        setState(() {
+                          radius = newValue;
+                          _changeDistance(radius.toInt());
+                        });
+                        
+                      },
+                    ),
+                    Center(
+                      child: FlatButton(
+                        color: Colors.green[900],
+                        child: Text(
+                          "Done",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        });
+  }
+
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height,
       width: double.infinity,
       child: Stack(
         children: <Widget>[
-          //Container for top data
           Container(
             margin: EdgeInsets.symmetric(horizontal: 32, vertical: 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    Container(
-                      child: Row(
-                        children: <Widget>[
-                          SizedBox(
-                            height: 30,
-                          ),
-                        ],
-                      ),
-                    )
-                  ],
-                ),
-                SizedBox(
-                  height: 24,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    Container(
-                      child: Column(
-                        children: <Widget>[
-                          Container(
-                            decoration: BoxDecoration(
-                                color: Color.fromRGBO(243, 245, 248, 1),
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(18))),
-                            child: Icon(
-                              Icons.notification_important,
-                              color: Colors.blue[900],
-                              size: 30,
-                            ),
-                            padding: EdgeInsets.all(12),
-                          ),
-                          SizedBox(
-                            height: 4,
-                          ),
-                          Text(
-                            "Alerts",
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: Colors.blue[100]),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      child: Column(
-                        children: <Widget>[
-                          Container(
+                Center(
+                  child: Container(
+                    child: Column(
+                      children: <Widget>[
+                        InkWell(
+                          child: Container(
                             decoration: BoxDecoration(
                                 color: Color.fromRGBO(243, 245, 248, 1),
                                 borderRadius:
@@ -144,49 +172,23 @@ class HomeScreen extends State<Home> {
                             ),
                             padding: EdgeInsets.all(12),
                           ),
-                          SizedBox(
-                            height: 4,
-                          ),
-                          Text(
-                            "Beep",
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: Colors.blue[100]),
-                          ),
-                        ],
-                      ),
+                          onTap: () => popup(),
+                        ),
+                        SizedBox(
+                          height: 10,
+                        ),
+                        Text(
+                          "Monitoring distance\n\n $radius metres",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              color: Colors.blue[100]),
+                        ),
+                      ],
                     ),
-                    Container(
-                      child: Column(
-                        children: <Widget>[
-                          Container(
-                            decoration: BoxDecoration(
-                                color: Color.fromRGBO(243, 245, 248, 1),
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(18))),
-                            child: Icon(
-                              Icons.settings,
-                              color: Colors.blue[900],
-                              size: 30,
-                            ),
-                            padding: EdgeInsets.all(12),
-                          ),
-                          SizedBox(
-                            height: 4,
-                          ),
-                          Text(
-                            "Settings",
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: Colors.blue[100]),
-                          ),
-                        ],
-                      ),
-                    )
-                  ],
-                )
+                  ),
+                ),
               ],
             ),
           ),
@@ -198,8 +200,8 @@ class HomeScreen extends State<Home> {
                 decoration: BoxDecoration(
                     color: Color.fromRGBO(243, 245, 248, 1),
                     borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20))),
+                        topLeft: Radius.circular(10),
+                        topRight: Radius.circular(10))),
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,7 +333,7 @@ class HomeScreen extends State<Home> {
                                   ScrollController(keepScrollOffset: false),
                             );
                           } else if (snapshot.hasError) {
-                            return Text("Error Kelvin: ${snapshot.error}");
+                            return Text("Error: ${snapshot.error}");
                           }
                           return CircularProgressIndicator();
                         },
