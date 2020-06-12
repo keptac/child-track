@@ -1,7 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
@@ -11,6 +11,7 @@ import 'package:track/coordinates.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:track/radiusStorage.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class FlutterDemo extends StatefulWidget {
   final CounterStorage storage;
@@ -21,15 +22,38 @@ class FlutterDemo extends StatefulWidget {
   _FlutterDemoState createState() => _FlutterDemoState();
 }
 
-class _FlutterDemoState extends State<FlutterDemo> {  
+class _FlutterDemoState extends State<FlutterDemo> {
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      new FlutterLocalNotificationsPlugin();
 
+  var initializationSettingsAndroid;
+  var initializationSettingsIOS;
+  var initializationSettings;
 
+  void _showNotification() async {
+    await _childNotification();
+  }
+
+  Future<void> _childNotification() async {
+    var androidPlatfromChannnelSpecifics = AndroidNotificationDetails(
+        'channelId', 'channelName', 'channelDescription',
+        importance: Importance.Max,
+        priority: Priority.Max,
+        ticker: 'Child Ticker');
+    var iosChannelSpecs = IOSNotificationDetails();
+    var platformChannelSpec =
+        NotificationDetails(androidPlatfromChannnelSpecifics, iosChannelSpecs);
+
+    await flutterLocalNotificationsPlugin.show(0, 'Child Location',
+        'Your child has gone out of your reach', platformChannelSpec,
+        payload: 'Text payload');
+  }
 
   double distance = 0;
   double radius; // In meters
   GoogleMapController mapController;
   Location location = new Location();
-  Firestore firestore = Firestore.instance;
+
   LatLng _lastMapPosition = LatLng(-17.823, 30.955);
   Stream<dynamic> query;
 
@@ -50,9 +74,48 @@ class _FlutterDemoState extends State<FlutterDemo> {
     }
   }
 
+  Future onSelectNotification(String payload) async {
+    if (payload != null) {
+      debugPrint('Notification payload: $payload');
+    }
+    // await Navigator.push(context, MaterialPageRoute(builder: (context)=>SecondRoute()));
+    new CircularProgressIndicator();
+  }
+
+  Future onDidReceiveLocalNotification(
+      int id, String title, String body, String pa) async {
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) => CupertinoAlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: <Widget>[
+          CupertinoDialogAction(
+              isDefaultAction: true,
+              child: Text('OK'),
+              onPressed: () async {
+                Navigator.of(context, rootNavigator: true).pop();
+                // await Navigator.push(context, MaterialPageRoute(builder: (context)=>SecondRoute()));
+                CircularProgressIndicator();
+              }),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    initializationSettingsAndroid =
+        new AndroidInitializationSettings('app_icon');
+
+    initializationSettingsIOS = new IOSInitializationSettings(
+        onDidReceiveLocalNotification: onDidReceiveLocalNotification);
+    initializationSettings = new InitializationSettings(
+        initializationSettingsAndroid, initializationSettingsIOS);
+    flutterLocalNotificationsPlugin.initialize(initializationSettings,
+        onSelectNotification: onSelectNotification);
+
     widget.storage.readCounter().then((int value) {
       setState(() {
         radius = value.toDouble();
@@ -80,6 +143,11 @@ class _FlutterDemoState extends State<FlutterDemo> {
             (1 - c((_lastMapPosition.longitude - lon1) * p)) /
             2;
     distance = (12742 * asin(sqrt(a))) * 1000;
+
+    if (distance > radius) {
+      _showNotification();
+    }
+
     return (12742 * asin(sqrt(a))) * 1000;
   }
 
@@ -87,61 +155,64 @@ class _FlutterDemoState extends State<FlutterDemo> {
     return widget.storage.writeCounter(value);
   }
 
-   popup() {
+  popup() {
     showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.0)),
-            child: Container(
-              height: 200,
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Text('Change your geofence radius',style: TextStyle(fontSize: 18),),
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+          child: Container(
+            height: 200,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Text(
+                      'Change your geofence radius',
+                      style: TextStyle(fontSize: 18),
                     ),
-                    SizedBox(
-                      height: 20,
-                    ),
-                    Slider(
-                      min: 0.0,
-                      max: 300.0,
-                      divisions: 5,
-                      value: radius,
-                      label: 'Radius $radius m',
-                      activeColor: Colors.green,
-                      inactiveColor: Colors.green.withOpacity(0.2),
-                      onChanged: (double newValue) {
-                        setState(() {
-                          radius = newValue;
-                          _changeDistance(radius.toInt());
-                        });
-                        
+                  ),
+                  SizedBox(
+                    height: 20,
+                  ),
+                  Slider(
+                    min: 0.0,
+                    max: 300.0,
+                    divisions: 5,
+                    value: radius,
+                    label: 'Radius $radius m',
+                    activeColor: Colors.green,
+                    inactiveColor: Colors.green.withOpacity(0.2),
+                    onChanged: (double newValue) {
+                      setState(() {
+                        radius = newValue;
+                        _changeDistance(radius.toInt());
+                      });
+                    },
+                  ),
+                  Center(
+                    child: FlatButton(
+                      color: Colors.green[900],
+                      child: Text(
+                        "Done",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
                       },
                     ),
-                    Center(
-                      child: FlatButton(
-                        color: Colors.green[900],
-                        child: Text(
-                          "Done",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          );
-        });
+          ),
+        );
+      },
+    );
   }
 
   Widget build(BuildContext context) {
@@ -172,7 +243,8 @@ class _FlutterDemoState extends State<FlutterDemo> {
                             ),
                             padding: EdgeInsets.all(12),
                           ),
-                          onTap: () => popup(),
+                          // onTap: () => _showNotification(),
+                            onTap: () => popup(),
                         ),
                         SizedBox(
                           height: 10,

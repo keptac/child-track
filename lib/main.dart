@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:track/home.dart';
-import 'package:track/pushNotification.dart';
 import 'package:track/radiusStorage.dart';
 import 'package:track/track.dart';
 
@@ -27,9 +26,6 @@ class ChildTrack extends StatefulWidget {
 }
 
 class _ChildTrackState extends State<ChildTrack> {
-
-  PushNotificationsManager notify = PushNotificationsManager();
-
   var screens = [
     FlutterDemo(storage: CounterStorage()),
     FireMap(storage: CounterStorage()),
@@ -39,7 +35,6 @@ class _ChildTrackState extends State<ChildTrack> {
 
   @override
   Widget build(BuildContext context) {
-    notify.init();
 
     return Scaffold(
       appBar: AppBar(
