@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:geocoder/geocoder.dart';
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'dart:math' show cos, sqrt, asin;
@@ -50,11 +52,11 @@ class _FlutterDemoState extends State<FlutterDemo> {
   }
 
   double distance = 0;
-  double radius; // In meters
+  double radius = 10;
   GoogleMapController mapController;
-  Location location = new Location();
+  Location location = Location();
 
-  LatLng _lastMapPosition = LatLng(-17.823, 30.955);
+  LatLng _lastMapPosition = LatLng(-20.1612, 28.6355);
   Stream<dynamic> query;
 
   Future<CoordinatesValue> futureCoordinatesValue;
@@ -122,15 +124,46 @@ class _FlutterDemoState extends State<FlutterDemo> {
       });
     });
     futureCoordinatesValue = fetchCoordinatesValue();
-    myDistance();
+    myLocation();
   }
 
-  myDistance() async {
-    var pos = await location.getLocation();
-    double lat = pos.latitude;
-    double lng = pos.longitude;
-    _lastMapPosition = LatLng(lat, lng);
-    print(_lastMapPosition);
+  myLocation() async {
+    bool _serviceEnabled;
+    PermissionStatus _permissionGranted;
+    // LocationData _locationData ;
+
+    _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
+        return;
+      }
+    }
+
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    await location.getLocation().then((onValue) {
+      double lat = onValue.latitude;
+      double lng = onValue.longitude;
+      setState(() {
+        _lastMapPosition = LatLng(lat, lng);
+      });
+    });
+  }
+
+  _getAddress(lat1, lon1) async {
+    final coordinates = new Coordinates(lat1, lon1);
+    var addresses =
+        await Geocoder.local.findAddressesFromCoordinates(coordinates);
+
+    var first = addresses.first;
+    return first.addressLine.toString();
   }
 
   double calculateDistance(lat1, lon1) {
@@ -147,6 +180,8 @@ class _FlutterDemoState extends State<FlutterDemo> {
     if (distance > radius) {
       _showNotification();
     }
+
+    print(_lastMapPosition.latitude);
 
     return (12742 * asin(sqrt(a))) * 1000;
   }
@@ -237,24 +272,23 @@ class _FlutterDemoState extends State<FlutterDemo> {
                                 borderRadius:
                                     BorderRadius.all(Radius.circular(18))),
                             child: Icon(
-                              Icons.public,
-                              color: Colors.blue[900],
-                              size: 30,
+                              Icons.location_searching,
+                              color: Colors.orange,
+                              size: 40,
                             ),
                             padding: EdgeInsets.all(12),
                           ),
-                          // onTap: () => _showNotification(),
-                            onTap: () => popup(),
+                          onTap: () => popup(),
                         ),
                         SizedBox(
-                          height: 10,
+                          height: 20,
                         ),
                         Text(
-                          "Monitoring distance\n\n $radius metres",
+                          "Click to here change monitoring distance\n\n $radius metres",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
-                              fontSize: 16,
+                              fontSize: 18,
                               color: Colors.blue[100]),
                         ),
                       ],
@@ -269,155 +303,147 @@ class _FlutterDemoState extends State<FlutterDemo> {
           DraggableScrollableSheet(
             builder: (context, scrollController) {
               return Container(
-                decoration: BoxDecoration(
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                        image: AssetImage('assets/images/loc.jpg'),
+                        fit: BoxFit.cover),
                     color: Color.fromRGBO(243, 245, 248, 1),
                     borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(10),
-                        topRight: Radius.circular(10))),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(
-                        height: 24,
-                      ),
-                      Container(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: <Widget>[
-                            Text(
-                              "Your Children",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 24,
-                                  color: Colors.black),
+                      topLeft: Radius.circular(5),
+                      topRight: Radius.circular(5),
+                    ),
+                  ),
+                  child: Stack(children: <Widget>[
+                    SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          SizedBox(
+                            height: 24,
+                          ),
+                          Container(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: <Widget>[
+                                Text(
+                                  "CHILD LOCATION",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 20,
+                                      color: Colors.black),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 32),
-                      ),
-                      SizedBox(
-                        height: 24,
-                      ),
-
-                      SizedBox(
-                        height: 16,
-                      ),
-                      //Container Listview for expenses and incomes
-                      Container(
-                        child: Text(
-                          "Locations",
-                          style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.grey[500]),
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 32),
-                      ),
-
-                      SizedBox(
-                        height: 16,
-                      ),
-
-                      FutureBuilder<dynamic>(
-                        future: futureCoordinatesValue,
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData) {
-                            return ListView.builder(
-                              itemBuilder: (context, index) {
-                                return Container(
-                                  margin: EdgeInsets.only(
-                                      left: 32, right: 32, bottom: 20),
-                                  padding: EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.all(
-                                          Radius.circular(10))),
-                                  child: Row(
-                                    children: <Widget>[
-                                      Container(
-                                        decoration: BoxDecoration(
-                                            color: Colors.grey[100],
-                                            borderRadius: BorderRadius.all(
-                                                Radius.circular(13))),
-                                        child: Icon(
-                                          Icons.person,
-                                          color: Colors.lightBlue[900],
-                                        ),
-                                        padding: EdgeInsets.all(12),
-                                      ),
-                                      SizedBox(
-                                        width: 16,
-                                      ),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                            padding: EdgeInsets.symmetric(horizontal: 32),
+                          ),
+                          SizedBox(
+                            height: 24,
+                          ),
+                          FutureBuilder<dynamic>(
+                            future: futureCoordinatesValue,
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData) {
+                                return ListView.builder(
+                                  itemBuilder: (context, index) {
+                                    return Card(
+                                      margin: EdgeInsets.only(
+                                          left: 32, right: 32, bottom: 10),
+                                      elevation: 5.0,
+                                      child: Container(
+                                        padding: EdgeInsets.all(16),
+                                        child: Row(
                                           children: <Widget>[
-                                            Text(
-                                              myModels[index]
-                                                  .vehicleId
-                                                  .toString(),
-                                              style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: Colors.grey[900]),
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                  color: Colors.grey[100],
+                                                  borderRadius:
+                                                      BorderRadius.all(
+                                                          Radius.circular(13))),
+                                              child: Icon(
+                                                Icons.person,
+                                                color: Colors.lightBlue[900],
+                                              ),
+                                              padding: EdgeInsets.all(12),
+                                            ),
+                                            SizedBox(
+                                              width: 16,
+                                            ),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: <Widget>[
+                                                  Text(
+                                                    'Device ' +
+                                                        myModels[index]
+                                                            .vehicleId
+                                                            .toString(),
+                                                    style: TextStyle(
+                                                        fontSize: 18,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color:
+                                                            Colors.grey[900]),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              children: <Widget>[
+                                                Text(
+                                                  calculateDistance(
+                                                              myModels[index]
+                                                                  .currentLocationLatitude,
+                                                              myModels[index]
+                                                                  .currentLocationLongitude)
+                                                          .toStringAsFixed(2) +
+                                                      " M",
+                                                  style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: distance > radius
+                                                          ? Colors.red
+                                                          : Colors.lightGreen),
+                                                ),
+
+                                                // Text(_getAddress(
+                                                //         myModels[index]
+                                                //             .currentLocationLatitude,
+                                                //         myModels[index]
+                                                //             .currentLocationLongitude)
+                                                //     .toString()),
+                                              ],
                                             ),
                                           ],
                                         ),
                                       ),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: <Widget>[
-                                          Text(
-                                            calculateDistance(
-                                                        myModels[index]
-                                                            .currentLocationLatitude,
-                                                        myModels[index]
-                                                            .currentLocationLongitude)
-                                                    .toStringAsFixed(2) +
-                                                " M",
-                                            style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w700,
-                                                color: distance > radius
-                                                    ? Colors.red
-                                                    : Colors.lightGreen),
-                                          ),
-                                          Text(
-                                            myModels[index].time,
-                                            style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w700,
-                                                color: Colors.grey[500]),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                                    );
+                                  },
+                                  shrinkWrap: true,
+                                  itemCount: myModels.length,
+                                  padding: EdgeInsets.only(bottom: 30.0),
+                                  controller:
+                                      ScrollController(keepScrollOffset: false),
                                 );
-                              },
-                              shrinkWrap: true,
-                              itemCount: myModels.length,
-                              padding: EdgeInsets.only(bottom: 30.0),
-                              controller:
-                                  ScrollController(keepScrollOffset: false),
-                            );
-                          } else if (snapshot.hasError) {
-                            return Text("Error: ${snapshot.error}");
-                          }
-                          return CircularProgressIndicator();
-                        },
+                              } else if (snapshot.hasError) {
+                                return Center(
+                                    child: Text("Failed contact child device"));
+                              }
+                              return Center(child: CircularProgressIndicator());
+                            },
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  controller: scrollController,
-                ),
-              );
+                      controller: scrollController,
+                    ),
+                  ]));
             },
-            initialChildSize: 0.65,
-            minChildSize: 0.65,
+            initialChildSize: 0.60,
+            minChildSize: 0.60,
             maxChildSize: 1,
           )
         ],

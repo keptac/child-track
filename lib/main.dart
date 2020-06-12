@@ -38,7 +38,8 @@ class _ChildTrackState extends State<ChildTrack> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('CHILD TRACK'),
+        title: Text('CHILD TRACK',style: TextStyle(color: Colors.yellow),),
+        
         centerTitle: true,
         backgroundColor: Color.fromRGBO(38, 81, 158, 1),
       ),

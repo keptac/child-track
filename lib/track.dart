@@ -30,8 +30,8 @@ class FireMapState extends State<FireMap> {
   double distance = 0;
   static double _radi = 0;
 
-  LatLng _lastMapPosition = LatLng(-17.823, 30.955);
-  static LatLng _radiusLocation = LatLng(-17.823, 30.955);
+  LatLng _lastMapPosition = LatLng(-20.1612,28.6355);
+  static LatLng _radiusLocation = LatLng(-20.1612,28.6355);
 
   Future<CoordinatesValue> futureCoordinatesValue;
   List<CoordinatesValue> myModels;
@@ -53,7 +53,7 @@ class FireMapState extends State<FireMap> {
   Set<Circle> circles = Set.from([
     Circle(
       strokeWidth: 1,
-      strokeColor: Colors.blue,
+      strokeColor: Colors.red,
       fillColor: Color.fromRGBO(0, 120, 0, 0.1),
       circleId: CircleId("Parent location"),
       center: LatLng(_radiusLocation.latitude, _radiusLocation.longitude),
@@ -64,6 +64,7 @@ class FireMapState extends State<FireMap> {
   @override
   void initState() {
     super.initState();
+    myLocationFinder();
     widget.storage.readCounter().then((int value) {
       setState(() {
         _radi = value.toDouble();
@@ -78,12 +79,38 @@ class FireMapState extends State<FireMap> {
     super.dispose();
   }
 
+
   myLocationFinder() async {
-    var pos = await location.getLocation();
-    double lat = pos.latitude;
-    double lng = pos.longitude;
-    _lastMapPosition = LatLng(lat, lng);
-    _radiusLocation = _lastMapPosition;
+    bool _serviceEnabled;
+    PermissionStatus _permissionGranted;
+    LocationData _locationData;
+
+    _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
+        return;
+      }
+    }
+
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    _locationData = await location.getLocation();
+
+    await location.getLocation().then((onValue) {
+      double lat = onValue.latitude;
+      double lng = onValue.longitude;
+      setState(() {
+         _lastMapPosition = LatLng(lat, lng);
+         _radiusLocation = _lastMapPosition;
+      });
+    });
   }
 
   double calculateDistance(lat1, lon1) {
@@ -116,7 +143,7 @@ class FireMapState extends State<FireMap> {
                 GoogleMap(
                     onMapCreated: _onMapCreated,
                     initialCameraPosition:
-                        CameraPosition(target: _lastMapPosition, zoom: 17),
+                        CameraPosition(target: _lastMapPosition, zoom: 25),
                     myLocationEnabled: true,
                     mapType: MapType.normal,
                     markers: Set<Marker>.of(markers.values),
@@ -133,11 +160,6 @@ class FireMapState extends State<FireMap> {
   }
 
   void _updateMarkers() {
-    print('\n--------------------MARKERS----------------------------');
-    print(markers);
-    print(myModels);
-    print('--------------------MARKERS end--------------------\n');
-
     for (CoordinatesValue item in myModels) {
       double distance = calculateDistance(
         item.currentLocationLatitude,
